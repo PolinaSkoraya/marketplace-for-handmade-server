@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import express from "express";
+import express, {response} from "express";
 import {loginBuyerValidation, registerBuyerValidation} from "../validation";
 import {verify} from "./verifyToken";
 import {Buyers, Goods, Sellers} from "../schemes/schemes";
@@ -11,27 +11,27 @@ const router = express.Router();
 const TOKEN_SECRET = 'sgsdrgsfsrs';
 
 //BUYERS
-router.get("/buyers", function(req, res){
+router.get("/buyers", function(request, response){
 
     Buyers.find({}, function(err, buyers){
 
         if(err) {
             return console.log(err)
         };
-        res.send(buyers)
+        response.send(buyers)
     });
 });
 
-router.get("/buyers/:id", function(req, res){
+router.get("/buyers/:id", function(request, response){
 
-    const id = req.params.id;
+    const id = request.params.id;
 
     Buyers.findOne({_id: id}, function(error, buyer){
 
         if(error) {
             return console.log(error);
         }
-        res.send(buyer);
+        response.send(buyer);
     });
 });
 
@@ -110,6 +110,18 @@ router.get("/goods", verify, function(req, res){
     });
 });
 
+router.get("/goods/:id", verify, function(req, res){
+   const id = req.params.id;
+
+    Goods.findOne({_id: id}, function(err, good){
+        if(err) {
+            return console.log(err);
+        }
+
+        res.send(good)
+    });
+});
+
 router.post("/goods", jsonParser, async function (req, res) {
     if (!req.body) {
         return res.sendStatus(400);
@@ -184,25 +196,24 @@ router.get("/sellers/:id/goods", function(req, res){
     });
 });
 
-router.post("/sellers/:id/goods", jsonParser, async function (req, res) {
+router.post("/sellers/:id/goods", jsonParser, async function (request, response) {
 
-    if(!req.body) {
-        return res.sendStatus(400);
+    if(!request.body) {
+        return response.sendStatus(400);
     }
 
-    const goodIdSeller = req.params.id;
+    const goodIdSeller = request.params.id;
 
-    const goodName = req.body.name;
-    const goodPrice = req.body.price;
+    const goodName = request.body.name;
+    const goodPrice = request.body.price;
     const good = new Goods({name: goodName, price: goodPrice, idSeller: goodIdSeller});
 
-    await good.save(function (err) {
-        if(err) {
-            return console.log(err);
-        }
-        res.send(good);
-    });
-
+    try {
+        const newGood = await good.save();
+        response.send(newGood);
+    } catch (error) {
+        return  console.log(error);
+    }
 });
 
 export {
