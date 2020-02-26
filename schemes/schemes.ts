@@ -27,7 +27,20 @@ const goodScheme = new Schema({
             type: Number,
             required: true
         },
-        idSeller: String
+        idSeller: String,
+        likes: {
+            type: Number,
+            required: true
+        },
+        description: {
+            type: String,
+            required: true
+        },
+        image: {
+            type: String,
+            required: true
+        },
+        seller: Object
     },
     {versionKey: false});
 
@@ -46,9 +59,14 @@ const sellerScheme = new Schema({
         },
         goods: {
             type: Array
+        },
+        logo: {
+            type: Array,
+            required: true
         }
     },
     {versionKey: false});
+
 
 const Buyers = mongoose.model("Buyer", buyerScheme);
 const Goods = mongoose.model("Good", goodScheme);

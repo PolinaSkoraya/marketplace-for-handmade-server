@@ -16,9 +16,9 @@ router.get("/buyers", function(request, response){
     Buyers.find({}, function(err, buyers){
 
         if(err) {
-            return console.log(err)
+            return console.log(err);
         };
-        response.send(buyers)
+        response.send(buyers);
     });
 });
 
@@ -66,6 +66,9 @@ router.post("/buyers/register", jsonParser, async function(req, res){
 });
 
 router.post("/buyers/login", jsonParser, async function(req, res){
+    let id: string;
+    let name: string;
+
     const {error} = loginBuyerValidation(req.body);
 
     if(error) {
@@ -73,29 +76,95 @@ router.post("/buyers/login", jsonParser, async function(req, res){
     }
 
     const buyer = await Buyers.findOne({email: req.body.email});
-    if(!buyer) {
+    if (buyer) {
+        id = buyer._id;
+        name = buyer.name;
+
+    } else {
         return res.status(400).send('Email is not found');
     }
 
     const validPass = await bcrypt.compare(req.body.password, buyer.password);
-    if(!validPass) {
+    if (!validPass) {
         return res.status(400).send('Invalid password');
     }
 
-    const token = jwt.sign({_id: buyer._id}, TOKEN_SECRET);
+    const token = jwt.sign({_id: id, name: name, role: "buyer" }, TOKEN_SECRET);
+
     res.header('auth-token', token).send(token);
+
 });
 
-router.get("/buyers/:id/basket", function(req, res){
-    const id = req.params.id;
+// router.get("/buyers/:id/basket", function(req, res){
+//     const id = req.params.id;
+//
+//     Buyers.findOne({_id: id}, function(err, buyers){
+//         if(err) {
+//             return console.log(err);
+//         }
+//
+//         res.send(buyers.basket);
+//     });
+// });
 
-    Buyers.findOne({_id: id}, function(err, buyers){
+//add good to basket
+router.post("/buyers/:id/basket", jsonParser, async function(req, res){
+    // let basket = [];
+
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+
+    const idBuyer = req.params.id;
+    const idGood = req.body.idGood;
+
+    await Buyers.updateOne({_id: idBuyer}, {$addToSet: {basket: idGood}}, function(err, buyer){
         if(err) {
             return console.log(err);
         }
 
-        res.send(buyers.basket)
+        res.send(buyer);
     });
+});
+
+router.post("/buyers/:id/basket/delete", jsonParser, async function(req, res){
+    // let basket = [];
+
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+
+    const idBuyer = req.params.id;
+    const idGood = req.body.idGood;
+
+    await Buyers.updateOne({_id: idBuyer}, {$pull: {basket: idGood}}, function(err, buyer){
+        if(err) {
+            return console.log(err);
+        }
+
+        res.send(buyer);
+    });
+});
+
+router.get("/buyers/:id/basket", verify, async function(req, res){
+    const id = req.params.id;
+    let basket = [];
+
+    await Buyers.findOne({_id: id}, function(err, buyers){
+        if(err) {
+            return console.log(err);
+        }
+
+        basket = buyers.basket;
+    });
+
+    Goods.find({_id: basket}, function (error, goods) {
+        if (error){
+            return console.log(error);
+        }
+
+        res.send(goods);
+    })
 });
 
 //GOODS
@@ -106,20 +175,42 @@ router.get("/goods", verify, function(req, res){
         if(err) {
             return console.log(err);
         }
-        res.send(goods)
+        res.send(goods);
     });
 });
 
 router.get("/goods/:id", verify, function(req, res){
    const id = req.params.id;
 
-    Goods.findOne({_id: id}, function(err, good){
-        if(err) {
+    Goods.findOne({_id: id}, function (err, good) {
+        if (err) {
             return console.log(err);
         }
 
-        res.send(good)
+        res.send(good);
     });
+});
+
+router.get("/goods/:id/seller", verify, function(req, res){
+    const id = req.params.id;
+    let responseGood;
+
+    Goods.findOne({_id: id}, function(err, good){
+        if (err) {
+            return console.log(err);
+        }
+        responseGood = good;
+        Sellers.findOne({_id: responseGood.idSeller}, function (error, seller) {
+            if (error) {
+                console.log(error);
+            }
+            responseGood.seller = seller;
+            res.send(responseGood);
+        })
+
+    });
+
+
 });
 
 router.post("/goods", jsonParser, async function (req, res) {
@@ -129,7 +220,10 @@ router.post("/goods", jsonParser, async function (req, res) {
 
     const goodName = req.body.name;
     const goodPrice = req.body.price;
-    const good = new Goods({name: goodName, price: goodPrice});
+    const good = new Goods({
+        name: goodName,
+        price: goodPrice
+    });
 
     await good.save(function(err) {
         if (err) {
@@ -137,6 +231,58 @@ router.post("/goods", jsonParser, async function (req, res) {
         }
 
         res.send(good);
+    });
+});
+
+router.post("/goods/:id/updateLikes", jsonParser, async function (req, res) {
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+
+    Goods.updateOne({_id: req.params.id}, {likes: req.body.likes} ,function (err, good) {
+        if (err) {
+            return console.log(err);
+        }
+
+        res.send(good);
+    });
+});
+
+router.post("/buyers/:id/liked", jsonParser, async function(req, res){
+    // let basket = [];
+
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+
+    const idBuyer = req.params.id;
+    const idGood = req.body.idGood;
+
+    await Buyers.updateOne({_id: idBuyer}, {$push: {likedGoods: idGood}}, function(err, buyer){
+        if(err) {
+            return console.log(err);
+        }
+
+        res.send(buyer);
+    });
+});
+
+router.post("/buyers/:id/liked/delete", jsonParser, async function(req, res){
+    // let basket = [];
+
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+
+    const idBuyer = req.params.id;
+    const idGood = req.body.idGood;
+
+    await Buyers.updateOne({_id: idBuyer}, {$pull: {likedGoods: idGood}}, function(err, buyer){
+        if(err) {
+            return console.log(err);
+        }
+
+        res.send(buyer);
     });
 });
 
@@ -148,7 +294,7 @@ router.get("/sellers", function(req, res){
         if (err) {
             return console.log(err);
         }
-        res.send(sellers)
+        res.send(sellers);
     });
 });
 
@@ -174,7 +320,14 @@ router.post("/sellers", jsonParser, async function (req, res) {
     const sellerName = req.body.name;
     const sellerDescription = req.body.description;
     const sellerServices = req.body.services;
-    const seller = new Sellers({name: sellerName, description: sellerDescription, services: sellerServices});
+    const sellerLogo = req.body.logo;
+
+    const seller = new Sellers({
+        name: sellerName,
+        description: sellerDescription,
+        services: sellerServices,
+        logo: sellerLogo
+    });
 
     await seller.save(function (err) {
         if(err) {
@@ -206,7 +359,18 @@ router.post("/sellers/:id/goods", jsonParser, async function (request, response)
 
     const goodName = request.body.name;
     const goodPrice = request.body.price;
-    const good = new Goods({name: goodName, price: goodPrice, idSeller: goodIdSeller});
+    const goodDescription = request.body.description;
+    const goodLikes = request.body.likes;
+    const goodImage = request.body.image;
+
+    const good = new Goods({
+        name: goodName,
+        price: goodPrice,
+        idSeller: goodIdSeller,
+        description: goodDescription,
+        likes: goodLikes,
+        image: goodImage
+    });
 
     try {
         const newGood = await good.save();
