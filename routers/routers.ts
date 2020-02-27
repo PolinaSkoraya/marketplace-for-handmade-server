@@ -118,7 +118,7 @@ router.post("/buyers/:id/basket", jsonParser, async function(req, res){
     const idBuyer = req.params.id;
     const idGood = req.body.idGood;
 
-    await Buyers.updateOne({_id: idBuyer}, {$addToSet: {basket: idGood}}, function(err, buyer){
+    await Buyers.findByIdAndUpdate(idBuyer, {$addToSet: {basket: idGood}},  {new: true}, function(err, buyer){
         if(err) {
             return console.log(err);
         }
@@ -128,8 +128,6 @@ router.post("/buyers/:id/basket", jsonParser, async function(req, res){
 });
 
 router.post("/buyers/:id/basket/delete", jsonParser, async function(req, res){
-    // let basket = [];
-
     if (!req.body) {
         return res.sendStatus(400);
     }
@@ -137,7 +135,7 @@ router.post("/buyers/:id/basket/delete", jsonParser, async function(req, res){
     const idBuyer = req.params.id;
     const idGood = req.body.idGood;
 
-    await Buyers.updateOne({_id: idBuyer}, {$pull: {basket: idGood}}, function(err, buyer){
+    await Buyers.findByIdAndUpdate( idBuyer, {$pull: {basket: idGood}},  {new: true}, function(err, buyer){
         if(err) {
             return console.log(err);
         }
@@ -234,12 +232,33 @@ router.post("/goods", jsonParser, async function (req, res) {
     });
 });
 
+//GOODS LIKES
+router.get("/buyers/:id/liked", verify, async function(req, res){
+    let likedGoods = [];
+
+    await Buyers.findOne({_id: req.params.id}, function(err, buyer){
+        if (err) {
+            return console.log(err);
+        }
+
+        likedGoods = buyer.likedGoods;
+    });
+
+    Goods.find({_id: likedGoods}, function (error, goods) {
+        if (error) {
+            return console.log(error);
+        }
+
+        res.send(goods);
+    })
+});
+
 router.post("/goods/:id/updateLikes", jsonParser, async function (req, res) {
     if (!req.body) {
         return res.sendStatus(400);
     }
 
-    Goods.updateOne({_id: req.params.id}, {likes: req.body.likes} ,function (err, good) {
+    Goods.findByIdAndUpdate(req.params.id, {likes: req.body.likes}, {new: true} ,function (err, good) {
         if (err) {
             return console.log(err);
         }
@@ -249,46 +268,35 @@ router.post("/goods/:id/updateLikes", jsonParser, async function (req, res) {
 });
 
 router.post("/buyers/:id/liked", jsonParser, async function(req, res){
-    // let basket = [];
-
     if (!req.body) {
         return res.sendStatus(400);
     }
-
-    const idBuyer = req.params.id;
     const idGood = req.body.idGood;
 
-    await Buyers.updateOne({_id: idBuyer}, {$push: {likedGoods: idGood}}, function(err, buyer){
+    await Buyers.findByIdAndUpdate(req.params.id, {$addToSet: {likedGoods: idGood}}, {new: true}, function(err, buyer){
         if(err) {
             return console.log(err);
         }
-
         res.send(buyer);
     });
 });
 
 router.post("/buyers/:id/liked/delete", jsonParser, async function(req, res){
-    // let basket = [];
-
     if (!req.body) {
         return res.sendStatus(400);
     }
-
-    const idBuyer = req.params.id;
     const idGood = req.body.idGood;
 
-    await Buyers.updateOne({_id: idBuyer}, {$pull: {likedGoods: idGood}}, function(err, buyer){
-        if(err) {
+    await Buyers.findByIdAndUpdate( req.params.id, {$pull: {likedGoods: idGood}}, {new: true}, function(err, buyer){
+        if (err) {
             return console.log(err);
         }
-
         res.send(buyer);
     });
 });
 
 //SELLERS
 router.get("/sellers", function(req, res){
-
     Sellers.find({}, function(err, sellers){
 
         if (err) {
@@ -299,10 +307,7 @@ router.get("/sellers", function(req, res){
 });
 
 router.get("/sellers/:id", function(req, res){
-
-    const id = req.params.id;
-
-    Sellers.findOne({_id: id}, function(err, user){
+    Sellers.findOne({_id: req.params.id}, function(err, user){
 
         if(err) {
             return console.log(err);
@@ -312,7 +317,6 @@ router.get("/sellers/:id", function(req, res){
 });
 
 router.post("/sellers", jsonParser, async function (req, res) {
-
     if(!req.body) {
         return res.sendStatus(400);
     }

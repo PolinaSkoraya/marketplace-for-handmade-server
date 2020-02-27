@@ -14,7 +14,8 @@ const buyerScheme = new Schema({
             type: String,
             required: true
         },
-        basket: Array
+        basket: Array,
+        likedGoods: Array
     },
     {versionKey: false});
 
