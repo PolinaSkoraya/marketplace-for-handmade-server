@@ -15,6 +15,7 @@ const buyerScheme = new Schema({
             required: true
         },
         basket: Array,
+        roles: Array,
         likedGoods: Array
     },
     {versionKey: false});

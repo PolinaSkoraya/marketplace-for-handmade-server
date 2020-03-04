@@ -10,6 +10,70 @@ const router = express.Router();
 
 const TOKEN_SECRET = 'sgsdrgsfsrs';
 
+router.post("/buyers/login", jsonParser, async function(req, res){
+    let id: string;
+    let name: string;
+    let roles = [];
+
+    const {error} = loginBuyerValidation(req.body);
+
+    if(error) {
+        return res.status(400).send(error.details[0].message);
+    }
+
+    const buyer = await Buyers.findOne({email: req.body.email});
+
+    if (buyer) {
+        id = buyer._id;
+        name = buyer.name;
+        roles = buyer.roles;
+
+    } else {
+        return res.status(400).send('Email is not found');
+    }
+
+    const validPass = await bcrypt.compare(req.body.password, buyer.password);
+    if (!validPass) {
+        return res.status(400).send('Invalid password');
+    }
+
+    const token = jwt.sign({id: id, name: name, roles: roles }, TOKEN_SECRET);
+
+    res.header('auth-token', token).send(token);
+
+});
+
+router.post("/buyers/register", jsonParser, async function(req, res){
+
+    const {error} = registerBuyerValidation(req.body);
+
+    if (error) {
+        return res.status(400).send(error.details[0].message);
+    }
+
+    const emailExist = await Buyers.findOne({email: req.body.email});
+    if(emailExist) {
+        return res.status(400).send('Email already exist')
+    };
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+    const buyer = new Buyers({
+        name: req.body.name,
+        email: req.body.email,
+        password: hashedPassword,
+        roles: ["BUYER"]
+    });
+
+    await buyer.save(function(error){
+        if(error) {
+            return console.log(error);
+        }
+        res.send({buyer: buyer._id});
+    });
+});
+
 //BUYERS
 router.get("/buyers", function(request, response){
 
@@ -35,77 +99,19 @@ router.get("/buyers/:id", function(request, response){
     });
 });
 
-router.post("/buyers/register", jsonParser, async function(req, res){
-
-    const {error} = registerBuyerValidation(req.body);
-
-    if (error) {
-        return res.status(400).send(error.details[0].message);
+router.post("/buyers/:id", jsonParser, async function(req, res){
+    if (!req.body.roles) {
+        return res.sendStatus(400);
     }
+    const role = req.body.roles;
 
-    const emailExist = await Buyers.findOne({email: req.body.email});
-    if(emailExist) {
-        return res.status(400).send('Email already exist')
-    };
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-
-    const buyer = new Buyers({
-        name: req.body.name,
-        email: req.body.email,
-        password: hashedPassword
-    });
-
-    await buyer.save(function(error){
-        if(error) {
-            return console.log(error);
+    await Buyers.findByIdAndUpdate(req.params.id, {$addToSet: {roles: role}}, {new: true}, function(err, user){
+        if(err) {
+            return console.log(err);
         }
-        res.send({buyer: buyer._id});
+        res.send(user);
     });
 });
-
-router.post("/buyers/login", jsonParser, async function(req, res){
-    let id: string;
-    let name: string;
-
-    const {error} = loginBuyerValidation(req.body);
-
-    if(error) {
-        return res.status(400).send(error.details[0].message);
-    }
-
-    const buyer = await Buyers.findOne({email: req.body.email});
-    if (buyer) {
-        id = buyer._id;
-        name = buyer.name;
-
-    } else {
-        return res.status(400).send('Email is not found');
-    }
-
-    const validPass = await bcrypt.compare(req.body.password, buyer.password);
-    if (!validPass) {
-        return res.status(400).send('Invalid password');
-    }
-
-    const token = jwt.sign({_id: id, name: name, role: "buyer" }, TOKEN_SECRET);
-
-    res.header('auth-token', token).send(token);
-
-});
-
-// router.get("/buyers/:id/basket", function(req, res){
-//     const id = req.params.id;
-//
-//     Buyers.findOne({_id: id}, function(err, buyers){
-//         if(err) {
-//             return console.log(err);
-//         }
-//
-//         res.send(buyers.basket);
-//     });
-// });
 
 //add good to basket
 router.post("/buyers/:id/basket", jsonParser, async function(req, res){
@@ -207,8 +213,6 @@ router.get("/goods/:id/seller", verify, function(req, res){
         })
 
     });
-
-
 });
 
 router.post("/goods", jsonParser, async function (req, res) {
@@ -216,11 +220,13 @@ router.post("/goods", jsonParser, async function (req, res) {
         return res.sendStatus(400);
     }
 
-    const goodName = req.body.name;
-    const goodPrice = req.body.price;
     const good = new Goods({
-        name: goodName,
-        price: goodPrice
+        name: req.body.name,
+        price: req.body.price,
+        idSeller: req.body.idSeller,
+        likes: req.body.likes,
+        description: req.body.description,
+        image: req.body.image
     });
 
     await good.save(function(err) {

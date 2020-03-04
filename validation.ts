@@ -1,7 +1,7 @@
 import Joi from '@hapi/joi'
 
 //register buyer
-export const registerBuyerValidation  = data =>{
+export const registerBuyerValidation  = data => {
     const schemaValid = Joi.object({
         name: Joi.string()
             .min(6)
@@ -14,10 +14,10 @@ export const registerBuyerValidation  = data =>{
             .min(6)
             .required()
     });
-    return schemaValid.validate(data);;
+    return schemaValid.validate(data);
 }
 
-export const loginBuyerValidation  = data =>{
+export const loginBuyerValidation  = data => {
     const schemaValid = Joi.object({
         email: Joi.string()
             .min(6)
@@ -27,6 +27,6 @@ export const loginBuyerValidation  = data =>{
             .min(6)
             .required()
     });
-    return schemaValid.validate(data);;
+    return schemaValid.validate(data);
 }
 
