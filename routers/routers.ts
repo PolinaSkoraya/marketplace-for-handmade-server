@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import express, {response} from "express";
+import express from "express";
 import {loginBuyerValidation, registerBuyerValidation} from "../validation";
 import {verify} from "./verifyToken";
-import {Buyers, Goods, Sellers} from "../schemes/schemes";
+import {Buyers, Goods, Orders, Sellers} from "../schemes/schemes";
 
 const jsonParser = express.json();
 const router = express.Router();
@@ -17,7 +17,7 @@ router.post("/buyers/login", jsonParser, async function(req, res){
 
     const {error} = loginBuyerValidation(req.body);
 
-    if(error) {
+    if (error) {
         return res.status(400).send(error.details[0].message);
     }
 
@@ -27,7 +27,6 @@ router.post("/buyers/login", jsonParser, async function(req, res){
         id = buyer._id;
         name = buyer.name;
         roles = buyer.roles;
-
     } else {
         return res.status(400).send('Email is not found');
     }
@@ -44,7 +43,6 @@ router.post("/buyers/login", jsonParser, async function(req, res){
 });
 
 router.post("/buyers/register", jsonParser, async function(req, res){
-
     const {error} = registerBuyerValidation(req.body);
 
     if (error) {
@@ -66,7 +64,7 @@ router.post("/buyers/register", jsonParser, async function(req, res){
         roles: ["BUYER"]
     });
 
-    await buyer.save(function(error){
+    await buyer.save(function (error) {
         if(error) {
             return console.log(error);
         }
@@ -75,27 +73,37 @@ router.post("/buyers/register", jsonParser, async function(req, res){
 });
 
 //BUYERS
+
 router.get("/buyers", function(request, response){
 
-    Buyers.find({}, function(err, buyers){
+    Buyers.find({}, function(error, buyers){
 
-        if(err) {
-            return console.log(err);
-        };
+        if (error) {
+            return console.log(error);
+        }
         response.send(buyers);
     });
 });
 
 router.get("/buyers/:id", function(request, response){
-
     const id = request.params.id;
 
-    Buyers.findOne({_id: id}, function(error, buyer){
-
-        if(error) {
+    Buyers.findOne({_id: id}, function(error, buyer) {
+        if (error) {
             return console.log(error);
         }
         response.send(buyer);
+    });
+});
+
+router.get("/buyers/:id/shop", function(request, response){
+    const id = request.params.id;
+
+    Sellers.findOne({idUser: id}, function(error, shop) {
+        if (error) {
+            return console.log(error);
+        }
+        response.send(shop);
     });
 });
 
@@ -106,7 +114,7 @@ router.post("/buyers/:id", jsonParser, async function(req, res){
     const role = req.body.roles;
 
     await Buyers.findByIdAndUpdate(req.params.id, {$addToSet: {roles: role}}, {new: true}, function(err, user){
-        if(err) {
+        if (err) {
             return console.log(err);
         }
         res.send(user);
@@ -115,8 +123,6 @@ router.post("/buyers/:id", jsonParser, async function(req, res){
 
 //add good to basket
 router.post("/buyers/:id/basket", jsonParser, async function(req, res){
-    // let basket = [];
-
     if (!req.body) {
         return res.sendStatus(400);
     }
@@ -125,10 +131,9 @@ router.post("/buyers/:id/basket", jsonParser, async function(req, res){
     const idGood = req.body.idGood;
 
     await Buyers.findByIdAndUpdate(idBuyer, {$addToSet: {basket: idGood}},  {new: true}, function(err, buyer){
-        if(err) {
+        if (err) {
             return console.log(err);
         }
-
         res.send(buyer);
     });
 });
@@ -142,10 +147,9 @@ router.post("/buyers/:id/basket/delete", jsonParser, async function(req, res){
     const idGood = req.body.idGood;
 
     await Buyers.findByIdAndUpdate( idBuyer, {$pull: {basket: idGood}},  {new: true}, function(err, buyer){
-        if(err) {
+        if (err) {
             return console.log(err);
         }
-
         res.send(buyer);
     });
 });
@@ -155,29 +159,25 @@ router.get("/buyers/:id/basket", verify, async function(req, res){
     let basket = [];
 
     await Buyers.findOne({_id: id}, function(err, buyers){
-        if(err) {
+        if (err) {
             return console.log(err);
         }
-
         basket = buyers.basket;
     });
 
     Goods.find({_id: basket}, function (error, goods) {
-        if (error){
+        if (error) {
             return console.log(error);
         }
-
         res.send(goods);
     })
 });
 
 //GOODS
 router.get("/goods", verify, function(req, res){
-
-    Goods.find({}, function(err, goods){
-
-        if(err) {
-            return console.log(err);
+    Goods.find({}, function(error, goods) {
+        if (error) {
+            return console.log(error);
         }
         res.send(goods);
     });
@@ -186,11 +186,10 @@ router.get("/goods", verify, function(req, res){
 router.get("/goods/:id", verify, function(req, res){
    const id = req.params.id;
 
-    Goods.findOne({_id: id}, function (err, good) {
-        if (err) {
-            return console.log(err);
+    Goods.findOne({_id: id}, function (error, good) {
+        if (error) {
+            return console.log(error);
         }
-
         res.send(good);
     });
 });
@@ -199,9 +198,9 @@ router.get("/goods/:id/seller", verify, function(req, res){
     const id = req.params.id;
     let responseGood;
 
-    Goods.findOne({_id: id}, function(err, good){
-        if (err) {
-            return console.log(err);
+    Goods.findOne({_id: id}, function (error, good) {
+        if (error) {
+            return console.log(error);
         }
         responseGood = good;
         Sellers.findOne({_id: responseGood.idSeller}, function (error, seller) {
@@ -213,6 +212,24 @@ router.get("/goods/:id/seller", verify, function(req, res){
         })
 
     });
+});
+
+router.post("/goods/:id", jsonParser, async function(req, res){
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+
+    await Goods.findByIdAndUpdate (req.params.id, {
+            name: req.body.name,
+            description: req.body.description,
+            price: req.body.price
+        }, {new: true},
+        function (error, good) {
+            if (error) {
+                return console.log(error);
+            }
+            res.send(good);
+        });
 });
 
 router.post("/goods", jsonParser, async function (req, res) {
@@ -229,11 +246,10 @@ router.post("/goods", jsonParser, async function (req, res) {
         image: req.body.image
     });
 
-    await good.save(function(err) {
-        if (err) {
-            return console.log(err);
+    await good.save( function (error) {
+        if (error) {
+            return console.log(error);
         }
-
         res.send(good);
     });
 });
@@ -242,11 +258,10 @@ router.post("/goods", jsonParser, async function (req, res) {
 router.get("/buyers/:id/liked", verify, async function(req, res){
     let likedGoods = [];
 
-    await Buyers.findOne({_id: req.params.id}, function(err, buyer){
+    await Buyers.findOne({_id: req.params.id}, function (err, buyer){
         if (err) {
             return console.log(err);
         }
-
         likedGoods = buyer.likedGoods;
     });
 
@@ -254,7 +269,6 @@ router.get("/buyers/:id/liked", verify, async function(req, res){
         if (error) {
             return console.log(error);
         }
-
         res.send(goods);
     })
 });
@@ -268,7 +282,6 @@ router.post("/goods/:id/updateLikes", jsonParser, async function (req, res) {
         if (err) {
             return console.log(err);
         }
-
         res.send(good);
     });
 });
@@ -280,7 +293,7 @@ router.post("/buyers/:id/liked", jsonParser, async function(req, res){
     const idGood = req.body.idGood;
 
     await Buyers.findByIdAndUpdate(req.params.id, {$addToSet: {likedGoods: idGood}}, {new: true}, function(err, buyer){
-        if(err) {
+        if (err) {
             return console.log(err);
         }
         res.send(buyer);
@@ -315,7 +328,7 @@ router.get("/sellers", function(req, res){
 router.get("/sellers/:id", function(req, res){
     Sellers.findOne({_id: req.params.id}, function(err, user){
 
-        if(err) {
+        if (err) {
             return console.log(err);
         }
         res.send(user);
@@ -339,7 +352,7 @@ router.post("/sellers", jsonParser, async function (req, res) {
         logo: sellerLogo
     });
 
-    await seller.save(function (err) {
+    await seller.save( function (err) {
         if(err) {
             return console.log(err);
         }
@@ -348,7 +361,6 @@ router.post("/sellers", jsonParser, async function (req, res) {
 });
 
 router.get("/sellers/:id/goods", function(req, res){
-
     const id = req.params.id;
     Goods.find({idSeller: id},function(err, goods){
 
@@ -360,7 +372,6 @@ router.get("/sellers/:id/goods", function(req, res){
 });
 
 router.post("/sellers/:id/goods", jsonParser, async function (request, response) {
-
     if(!request.body) {
         return response.sendStatus(400);
     }
@@ -389,6 +400,99 @@ router.post("/sellers/:id/goods", jsonParser, async function (request, response)
         return  console.log(error);
     }
 });
+
+router.get("/sellers/:id/orders", function(req, res){
+    const id = req.params.id;
+
+    Orders.find({idSeller: id},function (err, orders) {
+        if (err) {
+            return console.log(err);
+        }
+        res.send(orders);
+    });
+});
+
+router.get("/buyers/:id/orders", async function(req, res){
+    const id = req.params.id;
+
+    let orders = [];
+    let idGoods = [];
+    let goods = {};
+
+    await Orders.find({idUser: id},function(err, responseOrders){
+        if (err) {
+            return console.log(err);
+        }
+        orders = responseOrders;
+        orders.forEach(order => {
+            idGoods.push(order.idGood);
+        });
+    });
+
+    await Goods.find({_id: idGoods},function(err, responseGoods) {
+        if (err) {
+            return console.log(err);
+        }
+        goods = responseGoods;
+    })
+
+    for (let i = 0; i < idGoods.length; i++ ) {
+        goods[i].status = orders[i].status;
+    }
+
+    res.send(goods);
+});
+
+router.post("/buyers/:id/orders", jsonParser, async function(request, response){
+    if (!request.body) {
+        return response.sendStatus(400);
+    }
+
+    const order = new Orders({
+        idUser: request.params.id,
+        idGood: request.body.idGood,
+        idSeller: request.body.idSeller,
+        status: "processing"
+    });
+
+    try {
+        const newOrder = await order.save();
+        response.send(newOrder);
+    } catch (error) {
+        return  console.log(error);
+    }
+});
+
+// router.get("/sellers/:id/orders", async function(req, res){
+//     const id = req.params.id;
+//
+//     let orders = [];
+//     let idGoods = [];
+//     let goods = {};
+//
+//     await Orders.find({idSeller: id},function(err, responseOrders){
+//         if (err) {
+//             return console.log(err);
+//         }
+//         orders = responseOrders;
+//         orders.forEach(order => {
+//             idGoods.push(order.idGood);
+//         });
+//     });
+//
+//     await Goods.find({_id: idGoods},function(err, responseGoods) {
+//         if (err) {
+//             return console.log(err);
+//         }
+//         goods = responseGoods;
+//     })
+//
+//     for (let i = 0; i < idGoods.length; i++ ) {
+//         goods[i].status = orders[i].status;
+//     }
+//
+//     res.send(goods);
+// });
 
 export {
     router, TOKEN_SECRET

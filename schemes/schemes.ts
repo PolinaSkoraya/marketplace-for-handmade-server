@@ -42,7 +42,8 @@ const goodScheme = new Schema({
             type: String,
             required: true
         },
-        seller: Object
+        seller: Object,
+        status: String
     },
     {versionKey: false});
 
@@ -69,12 +70,33 @@ const sellerScheme = new Schema({
     },
     {versionKey: false});
 
+const orderScheme = new Schema({
+        idGood: {
+            type: String,
+            required: true
+        },
+        idUser: {
+            type: String,
+            required: true
+        },
+        idSeller: {
+            type: String,
+            required: true
+        },
+        status: {
+            type: String,
+            required: true
+        }
+    },
+    {versionKey: false});
+
 
 const Buyers = mongoose.model("Buyer", buyerScheme);
 const Goods = mongoose.model("Good", goodScheme);
 const Sellers = mongoose.model("Seller", sellerScheme);
+const Orders = mongoose.model("Order", orderScheme);
 
 export {
-    Buyers, Goods, Sellers
+    Buyers, Goods, Sellers, Orders
 }
 
