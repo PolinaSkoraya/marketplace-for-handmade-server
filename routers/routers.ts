@@ -183,6 +183,21 @@ router.get("/goods", verify, function(req, res){
     });
 });
 
+//new
+router.get("/goods/ids", verify, jsonParser, function(req, res) {
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+    let ids = req.body.ids;
+
+    Goods.find({_id: ids}, function (error, good) {
+        if (error) {
+            return console.log(error);
+        }
+        res.send(good);
+    });
+});
+
 router.get("/goods/:id", verify, function(req, res){
    const id = req.params.id;
 
@@ -401,16 +416,16 @@ router.post("/sellers/:id/goods", jsonParser, async function (request, response)
     }
 });
 
-router.get("/sellers/:id/orders", function(req, res){
-    const id = req.params.id;
-
-    Orders.find({idSeller: id},function (err, orders) {
-        if (err) {
-            return console.log(err);
-        }
-        res.send(orders);
-    });
-});
+// router.get("/sellers/:id/orders", function(req, res){
+//     const id = req.params.id;
+//
+//     Orders.find({idSeller: id},function (err, orders) {
+//         if (err) {
+//             return console.log(err);
+//         }
+//         res.send(orders);
+//     });
+// });
 
 router.get("/buyers/:id/orders", async function(req, res){
     const id = req.params.id;
@@ -463,36 +478,47 @@ router.post("/buyers/:id/orders", jsonParser, async function(request, response){
     }
 });
 
-// router.get("/sellers/:id/orders", async function(req, res){
-//     const id = req.params.id;
-//
-//     let orders = [];
-//     let idGoods = [];
-//     let goods = {};
-//
-//     await Orders.find({idSeller: id},function(err, responseOrders){
-//         if (err) {
-//             return console.log(err);
-//         }
-//         orders = responseOrders;
-//         orders.forEach(order => {
-//             idGoods.push(order.idGood);
-//         });
-//     });
-//
-//     await Goods.find({_id: idGoods},function(err, responseGoods) {
-//         if (err) {
-//             return console.log(err);
-//         }
-//         goods = responseGoods;
-//     })
-//
-//     for (let i = 0; i < idGoods.length; i++ ) {
-//         goods[i].status = orders[i].status;
-//     }
-//
-//     res.send(goods);
-// });
+router.get("/sellers/:id/orders", jsonParser, async function(req, res){
+    const id = req.params.id;
+
+    let orders = [];
+    let idGoods = [];
+    let goods = {};
+
+    await Orders.find({idSeller: id},function (err, responseOrders) {
+        if (err) {
+            return console.log(err);
+        }
+        orders = responseOrders;
+        orders.forEach(order => {
+            idGoods.push(order.idGood);
+        });
+    });
+
+    await Goods.find({_id: idGoods},function (err, responseGoods) {
+        if (err) {
+            return console.log(err);
+        }
+        goods = responseGoods;
+    })
+
+    for (let i = 0; i < idGoods.length; i++) {
+        goods[i].status = orders[i].status;
+    }
+
+    res.send(goods);
+});
+
+router.post("/sellers/orders/:id", jsonParser, async function(request, response) {
+   let idOrder = request.params.id;
+
+    await Orders.findByIdAndUpdate(idOrder, {status: "accepted"}, {new: true}, function (err, responseOrders) {
+        if (err) {
+            return console.log(err);
+        }
+        response.send(responseOrders);
+    });
+});
 
 export {
     router, TOKEN_SECRET
