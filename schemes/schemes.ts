@@ -43,7 +43,8 @@ const goodScheme = new Schema({
             required: true
         },
         seller: Object,
-        status: String
+        status: String,
+        idOrder: String
     },
     {versionKey: false});
 

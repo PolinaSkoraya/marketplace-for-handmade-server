@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import express from "express";
+import express, {response} from "express";
 import {loginBuyerValidation, registerBuyerValidation} from "../validation";
 import {verify} from "./verifyToken";
 import {Buyers, Goods, Orders, Sellers} from "../schemes/schemes";
@@ -431,31 +431,29 @@ router.get("/buyers/:id/orders", async function(req, res){
     const id = req.params.id;
 
     let orders = [];
-    let idGoods = [];
-    let goods = {};
+    let goods = [];
 
-    await Orders.find({idUser: id},function(err, responseOrders){
+    await Orders.find({idUser: id}, function(err, responseOrders) {
         if (err) {
             return console.log(err);
         }
         orders = responseOrders;
-        orders.forEach(order => {
-            idGoods.push(order.idGood);
-        });
+
+        async function processArray(orders) {
+            for (let i = 0; i < orders.length; i++) {
+                let responseGood = await Goods.find({ _id: orders[i].idGood });
+
+                let good = responseGood;
+                good[0].status = orders[i].status;
+                good[0].idOrder = orders[i].id;
+                goods.push(good[0]);
+            }
+            res.send(goods);
+        }
+
+        processArray(orders);
     });
 
-    await Goods.find({_id: idGoods},function(err, responseGoods) {
-        if (err) {
-            return console.log(err);
-        }
-        goods = responseGoods;
-    })
-
-    for (let i = 0; i < idGoods.length; i++ ) {
-        goods[i].status = orders[i].status;
-    }
-
-    res.send(goods);
 });
 
 router.post("/buyers/:id/orders", jsonParser, async function(request, response){
@@ -478,41 +476,49 @@ router.post("/buyers/:id/orders", jsonParser, async function(request, response){
     }
 });
 
-router.get("/sellers/:id/orders", jsonParser, async function(req, res){
+router.get("/sellers/:id/orders", async function(req, res){
     const id = req.params.id;
 
     let orders = [];
-    let idGoods = [];
-    let goods = {};
+    let goods = [];
 
-    await Orders.find({idSeller: id},function (err, responseOrders) {
+    await Orders.find({idSeller: id}, function(err, responseOrders) {
         if (err) {
             return console.log(err);
         }
         orders = responseOrders;
-        orders.forEach(order => {
-            idGoods.push(order.idGood);
-        });
-    });
 
-    await Goods.find({_id: idGoods},function (err, responseGoods) {
-        if (err) {
-            return console.log(err);
+        async function processArray(orders) {
+            for (let i = 0; i < orders.length; i++) {
+                let responseGood = await Goods.find({ _id: orders[i].idGood });
+
+                let good = responseGood;
+                good[0].status = orders[i].status;
+                good[0].idOrder = orders[i].id;
+                goods.push(good[0]);
+            }
+            res.send(goods);
         }
-        goods = responseGoods;
-    })
 
-    for (let i = 0; i < idGoods.length; i++) {
-        goods[i].status = orders[i].status;
-    }
-
-    res.send(goods);
+        processArray(orders);
+    });
 });
 
 router.post("/sellers/orders/:id", jsonParser, async function(request, response) {
    let idOrder = request.params.id;
 
     await Orders.findByIdAndUpdate(idOrder, {status: "accepted"}, {new: true}, function (err, responseOrders) {
+        if (err) {
+            return console.log(err);
+        }
+        response.send(responseOrders);
+    });
+});
+
+router.delete("/orders/:id", jsonParser, async function(request, response) {
+    let idOrder = request.params.id;
+
+    await Orders.findOneAndDelete({_id: idOrder}, function (err, responseOrders) {
         if (err) {
             return console.log(err);
         }
