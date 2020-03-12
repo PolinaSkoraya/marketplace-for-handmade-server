@@ -10,7 +10,7 @@ const router = express.Router();
 
 const TOKEN_SECRET = 'sgsdrgsfsrs';
 
-router.post("/buyers/login", jsonParser, async function(req, res){
+router.post("/users/login", jsonParser, async function(req, res){
     let id: string;
     let name: string;
     let roles = [];
@@ -42,7 +42,7 @@ router.post("/buyers/login", jsonParser, async function(req, res){
 
 });
 
-router.post("/buyers/register", jsonParser, async function(req, res){
+router.post("/users/register", jsonParser, async function(req, res){
     const {error} = registerBuyerValidation(req.body);
 
     if (error) {
@@ -74,7 +74,7 @@ router.post("/buyers/register", jsonParser, async function(req, res){
 
 //BUYERS
 
-router.get("/buyers", function(request, response){
+router.get("/users", function(request, response){
 
     Buyers.find({}, function(error, buyers){
 
@@ -85,7 +85,7 @@ router.get("/buyers", function(request, response){
     });
 });
 
-router.get("/buyers/:id", function(request, response){
+router.get("/users/:id", function(request, response){
     const id = request.params.id;
 
     Buyers.findOne({_id: id}, function(error, buyer) {
@@ -96,7 +96,7 @@ router.get("/buyers/:id", function(request, response){
     });
 });
 
-router.get("/buyers/:id/shop", function(request, response){
+router.get("/users/:id/shop", function(request, response){
     const id = request.params.id;
 
     Sellers.findOne({idUser: id}, function(error, shop) {
@@ -107,7 +107,7 @@ router.get("/buyers/:id/shop", function(request, response){
     });
 });
 
-router.post("/buyers/:id", jsonParser, async function(req, res){
+router.post("/users/:id", jsonParser, async function(req, res){
     if (!req.body.roles) {
         return res.sendStatus(400);
     }
@@ -122,7 +122,7 @@ router.post("/buyers/:id", jsonParser, async function(req, res){
 });
 
 //add good to basket
-router.post("/buyers/:id/basket", jsonParser, async function(req, res){
+router.post("/users/:id/basket", jsonParser, async function(req, res){
     if (!req.body) {
         return res.sendStatus(400);
     }
@@ -138,7 +138,7 @@ router.post("/buyers/:id/basket", jsonParser, async function(req, res){
     });
 });
 
-router.post("/buyers/:id/basket/delete", jsonParser, async function(req, res){
+router.post("/users/:id/basket/delete", jsonParser, async function(req, res){
     if (!req.body) {
         return res.sendStatus(400);
     }
@@ -154,7 +154,7 @@ router.post("/buyers/:id/basket/delete", jsonParser, async function(req, res){
     });
 });
 
-router.get("/buyers/:id/basket", verify, async function(req, res){
+router.get("/users/:id/basket", verify, async function(req, res){
     const id = req.params.id;
     let basket = [];
 
@@ -174,7 +174,7 @@ router.get("/buyers/:id/basket", verify, async function(req, res){
 });
 
 //GOODS
-router.get("/goods", verify, function(req, res){
+router.get("/goods", function(req, res){
     Goods.find({}, function(error, goods) {
         if (error) {
             return console.log(error);
@@ -270,7 +270,7 @@ router.post("/goods", jsonParser, async function (req, res) {
 });
 
 //GOODS LIKES
-router.get("/buyers/:id/liked", verify, async function(req, res){
+router.get("/users/:id/liked", verify, async function(req, res){
     let likedGoods = [];
 
     await Buyers.findOne({_id: req.params.id}, function (err, buyer){
@@ -301,7 +301,7 @@ router.post("/goods/:id/updateLikes", jsonParser, async function (req, res) {
     });
 });
 
-router.post("/buyers/:id/liked", jsonParser, async function(req, res){
+router.post("/users/:id/liked", jsonParser, async function(req, res){
     if (!req.body) {
         return res.sendStatus(400);
     }
@@ -315,7 +315,7 @@ router.post("/buyers/:id/liked", jsonParser, async function(req, res){
     });
 });
 
-router.post("/buyers/:id/liked/delete", jsonParser, async function(req, res){
+router.post("/users/:id/liked/delete", jsonParser, async function(req, res){
     if (!req.body) {
         return res.sendStatus(400);
     }
@@ -359,12 +359,14 @@ router.post("/sellers", jsonParser, async function (req, res) {
     const sellerDescription = req.body.description;
     const sellerServices = req.body.services;
     const sellerLogo = req.body.logo;
+    const idUser = req.body.idUser;
 
     const seller = new Sellers({
         name: sellerName,
         description: sellerDescription,
         services: sellerServices,
-        logo: sellerLogo
+        logo: sellerLogo,
+        idUser: idUser
     });
 
     await seller.save( function (err) {
@@ -427,7 +429,7 @@ router.post("/sellers/:id/goods", jsonParser, async function (request, response)
 //     });
 // });
 
-router.get("/buyers/:id/orders", async function(req, res){
+router.get("/users/:id/orders", async function(req, res){
     const id = req.params.id;
 
     let orders = [];
@@ -456,7 +458,7 @@ router.get("/buyers/:id/orders", async function(req, res){
 
 });
 
-router.post("/buyers/:id/orders", jsonParser, async function(request, response){
+router.post("/users/:id/orders", jsonParser, async function(request, response){
     if (!request.body) {
         return response.sendStatus(400);
     }

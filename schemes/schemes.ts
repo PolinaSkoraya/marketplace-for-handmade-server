@@ -65,9 +65,10 @@ const sellerScheme = new Schema({
             type: Array
         },
         logo: {
-            type: Array,
+            type: String,
             required: true
-        }
+        },
+        idUser: String
     },
     {versionKey: false});
 
