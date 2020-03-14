@@ -174,6 +174,15 @@ router.get("/users/:id/basket", verify, async function(req, res){
 });
 
 //GOODS
+router.get("/goods/:page", function(req, res){
+    Goods.paginate({}, { page: req.params.page, limit: 10 }, function(error, goods) {
+        if (error) {
+            return console.log(error);
+        }
+        res.send(goods);
+    });
+});
+
 router.get("/goods", function(req, res){
     Goods.find({}, function(error, goods) {
         if (error) {

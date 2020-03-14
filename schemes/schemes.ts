@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
+import mongoosePaginate from 'mongoose-paginate-v2';
 
 const buyerScheme = new Schema({
         name: {
@@ -92,6 +93,7 @@ const orderScheme = new Schema({
     },
     {versionKey: false});
 
+goodScheme.plugin(mongoosePaginate);
 
 const Buyers = mongoose.model("Buyer", buyerScheme);
 const Goods = mongoose.model("Good", goodScheme);
