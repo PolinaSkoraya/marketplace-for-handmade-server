@@ -43,6 +43,12 @@ const goodScheme = new Schema({
             type: String,
             required: true
         },
+        category: {
+            type: String,
+        },
+        tags: {
+            type: Array,
+        },
         seller: Object,
         status: String,
         idOrder: String

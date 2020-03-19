@@ -246,7 +246,8 @@ router.post("/goods/:id", jsonParser, async function(req, res){
     await Goods.findByIdAndUpdate (req.params.id, {
             name: req.body.name,
             description: req.body.description,
-            price: req.body.price
+            price: req.body.price,
+            category: req.body.category
         }, {new: true},
         function (error, good) {
             if (error) {
@@ -267,7 +268,9 @@ router.post("/goods", jsonParser, async function (req, res) {
         idSeller: req.body.idSeller,
         likes: req.body.likes,
         description: req.body.description,
-        image: req.body.image
+        image: req.body.image,
+        category: req.body.category,
+        tags: req.body.tags
     });
 
     await good.save( function (error) {
