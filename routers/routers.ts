@@ -174,15 +174,6 @@ router.get("/users/:id/basket", verify, async function(req, res){
 });
 
 //GOODS
-router.get("/goods/:page", function(req, res){
-    Goods.paginate({}, { page: req.params.page, limit: 10 }, function(error, goods) {
-        if (error) {
-            return console.log(error);
-        }
-        res.send(goods);
-    });
-});
-
 router.get("/goods", function(req, res){
     Goods.find({}, function(error, goods) {
         if (error) {
@@ -191,6 +182,17 @@ router.get("/goods", function(req, res){
         res.send(goods);
     });
 });
+
+router.get("/goods/:page", function(req, res){
+    Goods.paginate({}, { page: req.params.page, limit: 3 }, function(error, goods) {
+        if (error) {
+            return console.log(error);
+        }
+        res.send(goods);
+    });
+});
+
+
 
 //new
 router.get("/goods/ids", verify, jsonParser, function(req, res) {
@@ -455,12 +457,16 @@ router.get("/users/:id/orders", async function(req, res){
 
         async function processArray(orders) {
             for (let i = 0; i < orders.length; i++) {
-                let responseGood = await Goods.find({ _id: orders[i].idGood });
 
-                let good = responseGood;
-                good[0].status = orders[i].status;
-                good[0].idOrder = orders[i].id;
-                goods.push(good[0]);
+                try {
+                    let responseGood = await Goods.find({ _id: orders[i].idGood });
+                    let good = responseGood;
+                    good[0].status = orders[i].status;
+                    good[0].idOrder = orders[i].id;
+                    goods.push(good[0]);
+                } catch (error) {
+                    console.log(error);
+                }
             }
             res.send(goods);
         }
