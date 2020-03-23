@@ -535,7 +535,7 @@ router.post("/sellers/orders/:id", jsonParser, async function(request, response)
     });
 });
 
-router.delete("/orders/:id", jsonParser, async function(request, response) {
+router.post("/orders/:id", async function(request, response) {
     let idOrder = request.params.id;
 
     await Orders.findOneAndDelete({_id: idOrder}, function (err, responseOrders) {
@@ -544,6 +544,48 @@ router.delete("/orders/:id", jsonParser, async function(request, response) {
         }
         response.send(responseOrders);
     });
+});
+
+router.post("/users/:id/delete", async function(request, response) {
+    let idUserToDelete = request.params.id;
+
+    let idShop = "";
+
+    try {
+        await Sellers.findOne({idUser: idUserToDelete}, function (err, result) {
+            if (err) {
+                return console.log(err);
+            }
+            if (result) {
+                idShop = result._id;
+            }
+        });
+    } catch (error) {
+        console.log(error);
+    }
+
+
+
+    await Buyers.findOneAndDelete({_id: idUserToDelete}, function (err, result) {
+        if (err) {
+            return console.log(err);
+        }
+    });
+
+    await Orders.remove({idUser: idUserToDelete});
+
+    if (idShop) {
+        await Sellers.findOneAndDelete({_id: idShop}, function (err, result) {
+            if (err) {
+                return console.log(err);
+            }
+        });
+        await Orders.remove({idSeller: idShop});
+
+        await Goods.remove({idSeller: idShop});
+    }
+
+    response.send(idShop);
 });
 
 export {
