@@ -49,6 +49,9 @@ const goodScheme = new Schema({
         tags: {
             type: Array,
         },
+        photos: {
+            type: Array
+        },
         seller: Object,
         status: String,
         idOrder: String

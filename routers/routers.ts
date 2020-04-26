@@ -1,18 +1,123 @@
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
-import express, {response} from "express";
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import express from "express";
 import {loginBuyerValidation, registerBuyerValidation} from "../validation";
 import {verify} from "./verifyToken";
 import {Buyers, Goods, Orders, Sellers} from "../schemes/schemes";
+import cors from 'cors';
 
 const jsonParser = express.json();
 const router = express.Router();
+const app = express();
+
+app.use(cors());
+app.use('/api', router);
+app.use('/static/images', express.static( 'static'));
 
 const TOKEN_SECRET = 'sgsdrgsfsrs';
 
+router.get("/goods/query", function(req, res) {
+    const {query} = req;
+    let queryCond = {};
+    if(query.name) {
+        // @ts-ignore
+        queryCond.name = new RegExp([req.query.name].join(""), "i");
+    }
+    if(query.category) {
+        // @ts-ignore
+        queryCond.category = query.category;
+    }
+    Goods.paginate(queryCond, { page: req.query.page, limit: 8 }, function(error, goods) {
+        if (error) {
+            return console.log(error);
+        }
+        res.send(goods);
+    });
+});
+
+router.get("/goods/:id/seller", verify, function(req, res){
+    const id = req.params.id;
+    let responseGood;
+
+    Goods.findOne({_id: id}, function (error, good) {
+        if (error) {
+            return console.log(error);
+        }
+        responseGood = good;
+        Sellers.findOne({_id: responseGood.idSeller}, function (error, seller) {
+            if (error) {
+                console.log(error);
+            }
+            responseGood.seller = seller;
+            res.send(responseGood);
+        })
+
+    });
+});
+
+router.get("/goods/:id", verify, function(req, res){
+    const id = req.params.id;
+
+    Goods.findOne({_id: id}, function (error, good) {
+        if (error) {
+            return console.log(error);
+        }
+        res.send(good);
+    });
+});
+
+router.get("/goods", function(req, res){
+    Goods.find({}, function(error, goods) {
+        if (error) {
+            return console.log(error);
+        }
+        res.send(goods);
+    });
+});
+
+router.get("/goods/ids", verify, jsonParser, function(req, res) {
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+    let ids = req.body.ids;
+
+    Goods.find({_id: ids}, function (error, good) {
+        if (error) {
+            return console.log(error);
+        }
+        res.send(good);
+    });
+});
+
+router.post("/goods", jsonParser, async function (req, res) {
+    if (!req.body) {
+        return res.sendStatus(400);
+    }
+
+    const good = new Goods({
+        name: req.body.name,
+        price: req.body.price,
+        idSeller: req.body.idSeller,
+        likes: req.body.likes,
+        description: req.body.description,
+        image: req.body.image,
+        photos: req.body.photos,
+        category: req.body.category,
+        tags: req.body.tags
+    });
+
+    try {
+        await good.save();
+        res.status(201);
+        res.send(good);
+    } catch (error) {
+        res.sendStatus(400);
+    }
+});
+
 router.post("/users/login", jsonParser, async function(req, res){
-    let id: string;
-    let name: string;
+    let id;
+    let name;
     let roles = [];
 
     const {error} = loginBuyerValidation(req.body);
@@ -50,9 +155,9 @@ router.post("/users/register", jsonParser, async function(req, res){
     }
 
     const emailExist = await Buyers.findOne({email: req.body.email});
-    if(emailExist) {
+    if (emailExist) {
         return res.status(400).send('Email already exist')
-    };
+    }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(req.body.password, salt);
@@ -72,15 +177,14 @@ router.post("/users/register", jsonParser, async function(req, res){
     });
 });
 
-//BUYERS
-
 router.get("/users", function(request, response){
-
     Buyers.find({}, function(error, buyers){
 
         if (error) {
             return console.log(error);
         }
+        response.status(200);
+        console.log(response);
         response.send(buyers);
     });
 });
@@ -121,7 +225,6 @@ router.post("/users/:id", jsonParser, async function(req, res){
     });
 });
 
-//add good to basket
 router.post("/users/:id/basket", jsonParser, async function(req, res){
     if (!req.body) {
         return res.sendStatus(400);
@@ -158,86 +261,26 @@ router.get("/users/:id/basket", verify, async function(req, res){
     const id = req.params.id;
     let basket = [];
 
-    await Buyers.findOne({_id: id}, function(err, buyers){
+    await Buyers.findOne({_id: id}, function(err, buyers) {
         if (err) {
             return console.log(err);
         }
-        basket = buyers.basket;
+        if (buyers) {
+            basket = buyers.basket;
+        }
     });
 
-    Goods.find({_id: basket}, function (error, goods) {
-        if (error) {
-            return console.log(error);
-        }
-        res.send(goods);
-    })
-});
-
-//GOODS
-router.get("/goods", function(req, res){
-    Goods.find({}, function(error, goods) {
-        if (error) {
-            return console.log(error);
-        }
-        res.send(goods);
-    });
-});
-
-router.get("/goods/:page", function(req, res){
-    Goods.paginate({}, { page: req.params.page, limit: 3 }, function(error, goods) {
-        if (error) {
-            return console.log(error);
-        }
-        res.send(goods);
-    });
-});
-
-
-
-//new
-router.get("/goods/ids", verify, jsonParser, function(req, res) {
-    if (!req.body) {
-        return res.sendStatus(400);
-    }
-    let ids = req.body.ids;
-
-    Goods.find({_id: ids}, function (error, good) {
-        if (error) {
-            return console.log(error);
-        }
-        res.send(good);
-    });
-});
-
-router.get("/goods/:id", verify, function(req, res){
-   const id = req.params.id;
-
-    Goods.findOne({_id: id}, function (error, good) {
-        if (error) {
-            return console.log(error);
-        }
-        res.send(good);
-    });
-});
-
-router.get("/goods/:id/seller", verify, function(req, res){
-    const id = req.params.id;
-    let responseGood;
-
-    Goods.findOne({_id: id}, function (error, good) {
-        if (error) {
-            return console.log(error);
-        }
-        responseGood = good;
-        Sellers.findOne({_id: responseGood.idSeller}, function (error, seller) {
+    if (Boolean(basket.length)) {
+        Goods.find({_id: basket}, function (error, goods) {
             if (error) {
-                console.log(error);
+                return console.log(error);
             }
-            responseGood.seller = seller;
-            res.send(responseGood);
+            res.send(goods);
         })
+    } else {
+        res.send([]);
+    }
 
-    });
 });
 
 router.post("/goods/:id", jsonParser, async function(req, res){
@@ -259,31 +302,6 @@ router.post("/goods/:id", jsonParser, async function(req, res){
         });
 });
 
-router.post("/goods", jsonParser, async function (req, res) {
-    if (!req.body) {
-        return res.sendStatus(400);
-    }
-
-    const good = new Goods({
-        name: req.body.name,
-        price: req.body.price,
-        idSeller: req.body.idSeller,
-        likes: req.body.likes,
-        description: req.body.description,
-        image: req.body.image,
-        category: req.body.category,
-        tags: req.body.tags
-    });
-
-    await good.save( function (error) {
-        if (error) {
-            return console.log(error);
-        }
-        res.send(good);
-    });
-});
-
-//GOODS LIKES
 router.get("/users/:id/liked", verify, async function(req, res){
     let likedGoods = [];
 
@@ -291,15 +309,22 @@ router.get("/users/:id/liked", verify, async function(req, res){
         if (err) {
             return console.log(err);
         }
-        likedGoods = buyer.likedGoods;
+
+        if (buyer) {
+            likedGoods = buyer.likedGoods;
+        }
     });
 
-    Goods.find({_id: likedGoods}, function (error, goods) {
-        if (error) {
-            return console.log(error);
-        }
-        res.send(goods);
-    })
+    if (Boolean(likedGoods.length)) {
+        Goods.find({_id: likedGoods}, function (error, goods) {
+            if (error) {
+                return console.log(error);
+            }
+            res.send(goods);
+        })
+    } else {
+        res.send([]);
+    }
 });
 
 router.post("/goods/:id/updateLikes", jsonParser, async function (req, res) {
@@ -343,7 +368,6 @@ router.post("/users/:id/liked/delete", jsonParser, async function(req, res){
     });
 });
 
-//SELLERS
 router.get("/sellers", function(req, res){
     Sellers.find({}, function(err, sellers){
 
@@ -432,17 +456,6 @@ router.post("/sellers/:id/goods", jsonParser, async function (request, response)
     }
 });
 
-// router.get("/sellers/:id/orders", function(req, res){
-//     const id = req.params.id;
-//
-//     Orders.find({idSeller: id},function (err, orders) {
-//         if (err) {
-//             return console.log(err);
-//         }
-//         res.send(orders);
-//     });
-// });
-
 router.get("/users/:id/orders", async function(req, res){
     const id = req.params.id;
 
@@ -470,7 +483,6 @@ router.get("/users/:id/orders", async function(req, res){
             }
             res.send(goods);
         }
-
         processArray(orders);
     });
 
@@ -546,7 +558,7 @@ router.post("/orders/:id", async function(request, response) {
     });
 });
 
-router.post("/users/:id/delete", async function(request, response) {
+router.delete("/users/:id/delete", async function(request, response) {
     let idUserToDelete = request.params.id;
 
     let idShop = "";
@@ -563,8 +575,6 @@ router.post("/users/:id/delete", async function(request, response) {
     } catch (error) {
         console.log(error);
     }
-
-
 
     await Buyers.findOneAndDelete({_id: idUserToDelete}, function (err, result) {
         if (err) {
@@ -588,6 +598,4 @@ router.post("/users/:id/delete", async function(request, response) {
     response.send(idShop);
 });
 
-export {
-    router, TOKEN_SECRET
-}
+module.exports = app;
